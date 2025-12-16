@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Dashboard & Smart Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
+        .tab-button {
+            border-bottom: 3px solid transparent;
+            margin-bottom: -3px; /* Offset the border-bottom */
+        }
+        .tab-button.active {
+            color: #1d4ed8; /* Blue-700 */
+            border-bottom: 3px solid #1d4ed8;
+            font-weight: 600;
+        }
+        .input-group {
+            transition: all 0.3s ease;
+        }
+        .input-group:focus-within {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+            border-color: #3b82f6;
+        }
+        /* Sticky dashboard on desktop */
+        @media (min-width: 1024px) {
+            .dashboard-sticky {
+                position: sticky;
+                top: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="app" class="min-h-screen p-4 md:p-8 flex justify-center items-start">
+    <div class="w-full max-w-6xl">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4 text-center">Personal Financial Dashboard</h1>
+        <p id="auth-status" class="text-xs text-center mb-6 p-2 rounded-lg bg-blue-100 text-blue-700"></p>
+
+        <!-- Main Grid Layout (Input on left, Dashboard on right) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            <!-- 1. Data Input & Save Column (lg:col-span-2) -->
+            <div class="lg:col-span-2 bg-white shadow-xl rounded-xl p-6 md:p-8">
+
+                <!-- Status Message Area -->
+                <div id="message-box" class="p-3 mb-6 rounded-lg text-sm transition-opacity duration-300 opacity-0 hidden"></div>
+
+                <!-- Tab Navigation -->
+                <div class="flex border-b border-gray-200 mb-8">
+                    <button id="tab-income" data-tab="income" class="tab-button active flex-1 py-3 px-4 text-sm font-semibold text-gray-700 transition duration-200" onclick="window.switchTab('income')">Cash Flow</button>
+                    <button id="tab-networth" data-tab="networth" class="tab-button flex-1 py-3 px-4 text-sm font-semibold text-gray-700 transition duration-200" onclick="window.switchTab('networth')">Net Worth</button>
+                </div>
+
+                <!-- Form Sections -->
+                <form id="financial-form">
+                    <!-- Cash Flow Input (Initial Tab) -->
+                    <div id="tab-content-income" class="tab-content space-y-6">
+                        <h2 class="text-xl font-semibold text-gray-700 border-b pb-2 mb-4">Monthly Cash Flow (RM)</h2>
+
+                        <div class="input-field-group">
+                            <label for="monthlyIncome" class="block text-sm font-medium text-gray-700 mb-1">Total Monthly Take-Home Income</label>
+                            <input type="number" id="monthlyIncome" name="monthlyIncome" placeholder="e.g., 15000" class="input-group w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none" required>
+                        </div>
+
+                        <div class="input-field-group">
+                            <label for="monthlyExpenses" class="block text-sm font-medium text-gray-700 mb-1">Total Monthly Expenses (Fixed & Variable)</label>
+                            <input type="number" id="monthlyExpenses" name="monthlyExpenses" placeholder="e.g., 8000" class="input-group w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none" required>
+                        </div>
+
+                        <div class="input-field-group">
+                            <label for="monthlySavings" class="block text-sm font-medium text-gray-700 mb-1">Total Monthly Savings / Investment Contribution</label>
+                            <input type="number" id="monthlySavings" name="monthlySavings" placeholder="e.g., 2000" class="input-group w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none" required>
+                        </div>
+
+                        <!-- Gemini Integration 1 -->
+                        <button type="button" id="generate-analysis-button" onclick="window.analyzeCashFlow()" class="mt-6 w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg shadow-md transition duration-200 disabled:bg-gray-400 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                            </svg>
+                            Generate Cash Flow Summary (Gemini)
+                        </button>
+                    </div>
+
+                    <!-- Net Worth Input -->
+                    <div id="tab-content-networth" class="tab-content space-y-6 hidden">
+                        <h2 class="text-xl font-semibold text-gray-700 border-b pb-2 mb-4">Current Net Worth (RM)</h2>
+
+                        <div class="input-field-group">
+                            <label for="currentSavings" class="block text-sm font-medium text-gray-700 mb-1">Cash & Savings Account Balance</label>
+                            <input type="number" id="currentSavings" name="currentSavings" placeholder="e.g., 30000" class="input-group w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none" required>
+                        </div>
+
+                        <div class="input-field-group">
+                            <label for="totalInvestments" class="block text-sm font-medium text-gray-700 mb-1">Total Investment Value (Stocks, Unit Trusts, etc.)</label>
+                            <input type="number" id="totalInvestments" name="totalInvestments" placeholder="e.g., 400000" class="input-group w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none" required>
+                        </div>
+
+                        <div class="input-field-group">
+                            <label for="propertyValue" class="block text-sm font-medium text-gray-700 mb-1">Primary Property Current Market Value</label>
+                            <input type="number" id="propertyValue" name="propertyValue" placeholder="e.g., 800000" class="input-group w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none" required>
+                        </div>
+
+                        <div class="input-field-group">
+                            <label for="totalLoans" class="block text-sm font-medium text-gray-700 mb-1">Total Outstanding Loan Balances (Home + Car + Others)</label>
+                            <input type="number" id="totalLoans" name="totalLoans" placeholder="e.g., 600000" class="input-group w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none" required>
+                        </div>
+
+                        <!-- Gemini Integration 2 -->
+                        <button type="button" id="generate-risk-assessment-button" onclick="window.assessRisk()" class="mt-6 w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-md transition duration-200 disabled:bg-gray-400 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9.75v6.75m-4.5-4.5h9" />
+                            </svg>
+                            Assess Net Worth Risk (Gemini)
+                        </button>
+                    </div>
+
+                    <!-- Action Button -->
+                    <button type="submit" id="save-button" class="mt-8 w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-md transition duration-200 disabled:bg-gray-400">
+                        Save Financial Data
+                    </button>
+                </form>
+            </div>
+
+            <!-- 2. Dashboard/Analysis Column (lg:col-span-1) -->
+            <div class="lg:col-span-1">
+                <div id="dashboard-card" class="dashboard-sticky bg-white shadow-xl rounded-xl p-6 md:p-8">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 mr-2 text-blue-500">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.5l6-6 6 6 6-6" />
+                        </svg>
+                        Financial Analysis Dashboard
+                    </h2>
+                    <div id="analysis-output" class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p id="analysis-title" class="text-lg font-bold text-blue-800 mb-2">Instructions</p>
+                        <p id="analysis-text" class="text-gray-700 whitespace-pre-wrap">
+                            Enter your financial data in the fields on the left. Then, click one of the 'Generate Summary' or 'Assess Risk' buttons to receive an executive financial analysis powered by the Gemini AI.
+                        </p>
+                        <div id="loading-indicator" class="mt-4 text-blue-600 font-semibold hidden">
+                            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Generating analysis...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Firebase and App Script -->
+<script type="module">
+    // Load Firebase modules from CDN
+    import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // --- Gemini API Configuration ---
+    const GEMINI_MODEL = 'gemini-2.5-flash-preview-09-2025';
+    const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=`;
+    const apiKey = ""; // Canvas will provide this if it's empty
+
+    // Global Variables provided by the Canvas Environment
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+    let db;
+    let auth;
+    let userId = null;
+    const DATA_COLLECTION = 'financial_data';
+    const DATA_DOCUMENT = 'profile';
+
+    // --- Utility Functions ---
+
+    function showMessage(message, type = 'success') {
+        const box = document.getElementById('message-box');
+        box.textContent = message;
+        box.classList.remove('opacity-0', 'hidden', 'bg-green-100', 'text-green-800', 'bg-red-100', 'text-red-800', 'bg-blue-100', 'text-blue-800', 'bg-yellow-100', 'text-yellow-800');
+
+        if (type === 'success') {
+            box.classList.add('bg-green-100', 'text-green-800');
+        } else if (type === 'error') {
+            box.classList.add('bg-red-100', 'text-red-800');
+        } else if (type === 'info') {
+            box.classList.add('bg-blue-100', 'text-blue-800');
+        } else {
+             box.classList.add('bg-yellow-100', 'text-yellow-800');
+        }
+
+        box.classList.remove('hidden');
+        box.classList.add('opacity-100');
+
+        setTimeout(() => {
+            box.classList.add('opacity-0');
+            setTimeout(() => {
+                box.classList.add('hidden');
+            }, 300);
+        }, 5000);
+    }
+
+    function getUserDocRef() {
+        if (!db || !userId) {
+            console.error("Firestore or User ID not initialized.");
+            return null;
+        }
+        return doc(db, 'artifacts', appId, 'users', userId, DATA_COLLECTION, DATA_DOCUMENT);
+    }
+
+    // --- Data Handlers ---
+
+    async function loadData() {
+        if (!userId) {
+            console.log("Waiting for authentication to complete before loading data.");
+            return;
+        }
+
+        const docRef = getUserDocRef();
+        if (!docRef) return;
+
+        try {
+            showMessage("Loading data...", 'info');
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                document.getElementById('monthlyIncome').value = data.monthlyIncome || '';
+                document.getElementById('monthlyExpenses').value = data.monthlyExpenses || '';
+                document.getElementById('monthlySavings').value = data.monthlySavings || '';
+                document.getElementById('currentSavings').value = data.currentSavings || '';
+                document.getElementById('totalInvestments').value = data.totalInvestments || '';
+                document.getElementById('propertyValue').value = data.propertyValue || '';
+                document.getElementById('totalLoans').value = data.totalLoans || '';
+                showMessage("Data loaded successfully.", 'success');
+            } else {
+                showMessage("No saved data found. Please enter new data.", 'info');
+            }
+        } catch (error) {
+            console.error("Error loading data: ", error);
+            showMessage("Error loading data. Check console for details.", 'error');
+        }
+    }
+
+    async function saveData(event) {
+        event.preventDefault();
+        if (!userId) {
+            showMessage("Authentication in progress. Please wait a moment.", 'error');
+            return;
+        }
+
+        const form = document.getElementById('financial-form');
+        const formData = new FormData(form);
+
+        const data = {
+            // Cash Flow
+            monthlyIncome: parseFloat(formData.get('monthlyIncome')) || 0,
+            monthlyExpenses: parseFloat(formData.get('monthlyExpenses')) || 0,
+            monthlySavings: parseFloat(formData.get('monthlySavings')) || 0,
+            // Net Worth
+            currentSavings: parseFloat(formData.get('currentSavings')) || 0,
+            totalInvestments: parseFloat(formData.get('totalInvestments')) || 0,
+            propertyValue: parseFloat(formData.get('propertyValue')) || 0,
+            totalLoans: parseFloat(formData.get('totalLoans')) || 0,
+            lastUpdated: new Date().toISOString()
+        };
+
+        const docRef = getUserDocRef();
+        if (!docRef) return;
+
+        const saveButton = document.getElementById('save-button');
+        saveButton.disabled = true;
+        saveButton.textContent = "Saving...";
+
+        try {
+            await setDoc(docRef, data, { merge: false });
+            showMessage("Data saved successfully!", 'success');
+        } catch (error) {
+            console.error("Error saving data: ", error);
+            showMessage("Error saving data. Check console for details.", 'error');
+        } finally {
+            saveButton.disabled = false;
+            saveButton.textContent = "Save Financial Data";
+        }
+    }
+
+    // --- Gemini API Call Function ---
+
+    /**
+     * Calls the Gemini API with exponential backoff.
+     * @param {string} userQuery - The main instruction for the model.
+     * @param {string} systemPrompt - The role and rules for the model.
+     * @param {number} maxRetries - Maximum number of retries.
+     * @returns {Promise<string>} The generated text response.
+     */
+    async function generateGeminiContent(userQuery, systemPrompt, maxRetries = 5) {
+        const payload = {
+            contents: [{ parts: [{ text: userQuery }] }],
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            tools: [{ "google_search": {} }],
+        };
+
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                const response = await fetch(GEMINI_API_URL + apiKey, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.status === 429) {
+                    if (attempt < maxRetries - 1) {
+                        const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        continue; // Retry
+                    } else {
+                        throw new Error('Too many requests. Max retries exceeded.');
+                    }
+                }
+
+                if (!response.ok) {
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (text) {
+                    return text;
+                } else {
+                    throw new Error('Gemini response structure is invalid or empty.');
+                }
+            } catch (error) {
+                console.error(`Attempt ${attempt + 1} failed:`, error);
+                if (attempt === maxRetries - 1) {
+                    throw new Error('Failed to generate content after multiple retries.');
+                }
+            }
+        }
+    }
+
+
+    // --- Gemini Feature Implementations ---
+
+    function showLoading(buttonId, isLoading, title) {
+        const button = document.getElementById(buttonId);
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const analysisText = document.getElementById('analysis-text');
+        const analysisTitle = document.getElementById('analysis-title');
+
+        if (isLoading) {
+            button.disabled = true;
+            analysisTitle.textContent = title;
+            analysisText.textContent = '';
+            loadingIndicator.classList.remove('hidden');
+        } else {
+            button.disabled = false;
+            loadingIndicator.classList.add('hidden');
+        }
+    }
+
+    window.analyzeCashFlow = async function() {
+        const buttonId = 'generate-analysis-button';
+        showLoading(buttonId, true, 'Cash Flow Executive Summary');
+
+        // 1. Gather Cash Flow Data
+        const income = parseFloat(document.getElementById('monthlyIncome').value) || 0;
+        const expenses = parseFloat(document.getElementById('monthlyExpenses').value) || 0;
+        const savings = parseFloat(document.getElementById('monthlySavings').value) || 0;
+
+        if (income <= 0) {
+            showMessage("Please enter a valid Monthly Income (RM) before running the analysis.", 'error');
+            document.getElementById('analysis-title').textContent = 'Error';
+            document.getElementById('analysis-text').textContent = 'Monthly Income must be greater than RM 0 for a meaningful analysis.';
+            showLoading(buttonId, false);
+            return;
+        }
+
+        // 2. Construct Prompt
+        const cashFlowData = `Monthly Take-Home Income: RM ${income.toFixed(2)}
+Monthly Total Expenses: RM ${expenses.toFixed(2)}
+Monthly Savings/Investment Contribution: RM ${savings.toFixed(2)}`;
+
+        const userQuery = `Analyze the following monthly cash flow data (all amounts in RM):
+${cashFlowData}
+Provide an executive summary in three concise paragraphs. First, calculate the monthly surplus/deficit and the net saving rate (savings / income) in percentage. Second, provide a high-level assessment of the cash flow health. Third, offer one actionable, specific suggestion for improving the saving rate or managing expenses.`;
+
+        const systemPrompt = "You are a highly experienced and professional Malaysian Financial Planner. Your responses must be sharp, data-driven, and focused solely on the provided numbers. Use clear headings and monetary symbols (RM).";
+
+        try {
+            // 3. Call Gemini API
+            const resultText = await generateGeminiContent(userQuery, systemPrompt);
+            document.getElementById('analysis-text').textContent = resultText;
+            showMessage("Cash Flow Analysis successfully generated!", 'success');
+        } catch (error) {
+            document.getElementById('analysis-text').textContent = 'Error generating analysis. Please try again or check the console for API details.';
+            showMessage("Analysis generation failed.", 'error');
+            console.error("Gemini API Error:", error);
+        } finally {
+            showLoading(buttonId, false, 'Cash Flow Executive Summary');
+        }
+    }
+
+    window.assessRisk = async function() {
+        const buttonId = 'generate-risk-assessment-button';
+        showLoading(buttonId, true, 'Net Worth Risk Assessment');
+
+        // 1. Gather Net Worth Data
+        const savings = parseFloat(document.getElementById('currentSavings').value) || 0;
+        const investments = parseFloat(document.getElementById('totalInvestments').value) || 0;
+        const property = parseFloat(document.getElementById('propertyValue').value) || 0;
+        const loans = parseFloat(document.getElementById('totalLoans').value) || 0;
+
+        const totalAssets = savings + investments + property;
+
+        if (totalAssets <= 0 || loans < 0) {
+            showMessage("Please ensure you have entered valid values for Assets and Loans before running the risk assessment.", 'error');
+            document.getElementById('analysis-title').textContent = 'Error';
+            document.getElementById('analysis-text').textContent = 'Total Assets must be greater than RM 0 for a meaningful risk assessment.';
+            showLoading(buttonId, false);
+            return;
+        }
+
+        // 2. Construct Prompt
+        const netWorthData = `Total Liquid Assets (Cash & Investments): RM ${(savings + investments).toFixed(2)}
+Property Market Value: RM ${property.toFixed(2)}
+Total Outstanding Loans/Liabilities: RM ${loans.toFixed(2)}
+Calculated Total Assets: RM ${totalAssets.toFixed(2)}`;
+
+        const userQuery = `Perform a financial risk assessment based on the following net worth data (all amounts in RM):
+${netWorthData}
+Provide an analysis in three concise paragraphs. First, calculate the Debt-to-Asset Ratio (Total Loans / Total Assets) in percentage and comment on whether it is within a healthy range (typically < 50%). Second, analyze the composition of the total assets, specifically commenting on the liquidity (liquid assets vs. property). Third, offer one actionable, specific recommendation to optimize the net worth structure or mitigate financial risk.`;
+
+        const systemPrompt = "You are a specialized and professional Risk Management Consultant in Malaysia. Your assessment must be quantitative, focus on leverage and liquidity, and provide specific, relevant advice. Use clear headings and monetary symbols (RM).";
+
+        try {
+            // 3. Call Gemini API
+            const resultText = await generateGeminiContent(userQuery, systemPrompt);
+            document.getElementById('analysis-text').textContent = resultText;
+            showMessage("Net Worth Risk Assessment successfully generated!", 'success');
+        } catch (error) {
+            document.getElementById('analysis-text').textContent = 'Error generating risk assessment. Please try again or check the console for API details.';
+            showMessage("Risk assessment generation failed.", 'error');
+            console.error("Gemini API Error:", error);
+        } finally {
+            showLoading(buttonId, false, 'Net Worth Risk Assessment');
+        }
+    }
+
+
+    // --- Initialization ---
+
+    async function initializeFirebase() {
+        if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
+            showMessage("Firebase configuration is missing. Data cannot be saved.", 'error');
+            document.getElementById('save-button').disabled = true;
+            return;
+        }
+
+        try {
+            setLogLevel('debug');
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            // Authentication Listener
+            onAuthStateChanged(auth, async (user) => {
+                const authStatusEl = document.getElementById('auth-status');
+
+                if (user) {
+                    userId = user.uid;
+                    authStatusEl.textContent = `Authenticated. User ID: ${userId}`;
+                    authStatusEl.classList.remove('bg-yellow-100', 'text-yellow-700');
+                    authStatusEl.classList.add('bg-blue-100', 'text-blue-700');
+                    console.log("User signed in. UID:", userId);
+                    await loadData();
+                } else {
+                    userId = null;
+                    authStatusEl.textContent = "Authentication in progress...";
+                    console.log("User signed out.");
+                }
+            });
+
+            // Sign in using custom token or anonymously
+            if (initialAuthToken) {
+                await signInWithCustomToken(auth, initialAuthToken);
+            } else {
+                await signInAnonymously(auth);
+            }
+
+            // Set up form submission listener
+            document.getElementById('financial-form').addEventListener('submit', saveData);
+
+        } catch (error) {
+            console.error("Firebase Initialization Error: ", error);
+            showMessage("Failed to initialize Firebase. Data saving is disabled.", 'error');
+            document.getElementById('save-button').disabled = true;
+        }
+    }
+
+    // Tab switching logic (exposed globally for onclick)
+    window.switchTab = function(tabName) {
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.classList.remove('active');
+        });
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.add('hidden');
+        });
+
+        document.getElementById(`tab-${tabName}`).classList.add('active');
+        document.getElementById(`tab-content-${tabName}`).classList.remove('hidden');
+    }
+
+    // Wait for the window to load before running initialization
+    window.onload = initializeFirebase;
+</script>
+
+</body>
+</html>
